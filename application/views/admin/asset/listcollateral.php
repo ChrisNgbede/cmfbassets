@@ -76,6 +76,7 @@ endforeach; ?>
                     <table id="grouptable" class="table table-hover table-sm table-striped">
                         <thead>
                             <tr class="">
+                                <th>Code</th>
                                 <th class="">Name</th>
                                 <th class="">Customer</th>
                                 <th>Acct No</th>
@@ -90,6 +91,10 @@ endforeach; ?>
                             <?php if (!empty($collaterals)): ?>
                             <?php foreach ($collaterals as $collateral): ?>
                             <tr class="">
+
+                                <td>
+                                    <strong><?php echo $collateral->collateral_code ?></strong>
+                                </td>
 
                                 <td class="">
                                     <?php echo !empty($collateral->name) ? $collateral->name : '<span class="badge badge-danger">no name</span>'?>
@@ -198,7 +203,7 @@ endif ?>
 
     $(function () {
         $("#grouptable").DataTable({
-            "order": [[4, "desc"]]
+            "order": [[5, "desc"]]
         });
 
         // Make rows clickable

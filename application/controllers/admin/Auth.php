@@ -11,6 +11,7 @@ class Auth extends MY_Controller {
 
 		parent::__construct();
 		$this->load->model('admin/auth_model', 'auth_model');
+		$this->load->model('admin/Activity_model', 'activity_model');
 	}
 
 	//--------------------------------------------------------------
@@ -69,6 +70,9 @@ class Auth extends MY_Controller {
 						$this->session->set_userdata($admin_data);
 						$this->rbac->set_access_in_session(); // set access in session
 						
+						// Activity Log
+						$this->activity_model->add_log(11, 'Admin logged in: '.$result['username']);
+
 						$redirect_to = $this->session->userdata('redirect_to');
 						if($redirect_to){
 							$this->session->unset_userdata('redirect_to');
@@ -442,6 +446,7 @@ class Auth extends MY_Controller {
 		}
 
 		public function logout(){
+			$this->activity_model->add_log(12, 'Admin logged out: '.$this->session->userdata('username'));
 			$this->session->sess_destroy();
 			redirect(base_url('admin/auth/login'), 'refresh');
 		}

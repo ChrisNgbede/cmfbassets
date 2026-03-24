@@ -7,6 +7,10 @@ $staffs = getalldata('staff');
     <hr>   
     <div class="row pl-4 pr-4">
          <div class="form-group col-md-6">
+                 <label class="font-weight-600">Collateral Code <span class="text-danger">*</span></label>
+                <?= form_input('collateral_code', set_value('collateral_code', !empty($collateral->collateral_code) ? $collateral->collateral_code : $generated_code), 'class="form-control" id="collateral_code" required'); ?>
+            </div>
+         <div class="form-group col-md-6">
                  <label class="font-weight-600">Account Officer <span class="text-danger">*</span></label>
                     <select name="officerincharge" class="form-control" id="owner" required>
                         <option value="">officer in charge</option>

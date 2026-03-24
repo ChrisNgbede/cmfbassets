@@ -11,11 +11,11 @@
 			$this->load->library('upload');
 			$this->load->helper('notification');
 			$this->rbac->check_module_access();
-			$this->rbac->check_operation_access();
-
+			// Removing check_operation_access() from construct to avoid blocking supporting/AJAX functions
 		}
 
 		public function index(){
+			$this->rbac->check_operation_access('view');
 			$where = [];
 			if($this->input->get('category')) $where['category'] = $this->input->get('category');
 			if($this->input->get('status')) $where['status'] = $this->input->get('status');
@@ -120,6 +120,8 @@
 		}
 
 		public function listcollateral(){
+			$this->rbac->check_operation_access('view');
+			$data['title'] = 'Collateral List';
 			$where = [];
 			if($this->input->get('status')) $where['status'] = $this->input->get('status');
 			if($this->input->get('officer')) $where['officerincharge'] = $this->input->get('officer');
@@ -162,7 +164,7 @@
 				fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
 
 				$header = array(
-					"Collateral Name", "Customer Name", "Account Number", "Phone", 
+					"Collateral Code", "Collateral Name", "Customer Name", "Account Number", "Phone", 
 					"Facility Amount", "Valuation", "Status", "Date Registered", 
 					"Officer In Charge", "Registered By", "Registration Comment"
 				);
@@ -183,6 +185,7 @@
 		}
 
 		public function collateraldetails($id = 0){
+			$this->rbac->check_operation_access('view');
 			$data['collateral'] = getbyid($id,'collaterals');
 			if(empty($data['collateral']) || (is_object($data['collateral']) && property_exists($data['collateral'], 'id') && empty($data['collateral']->id))) {
 				$this->session->set_flashdata('error', 'Collateral not found');
@@ -200,9 +203,9 @@
         	$this->load->view('admin/includes/_footer');
 		}
 	    public function create($id = 0){
-
+			$this->rbac->check_operation_access();
+			$id = $this->input->post('id') ? $this->input->post('id') : $id;
 		   	$data['asset'] = $this->Common_model->get_one($id,'assets');
-		    $id = $this->input->post('id');
 			if($this->input->post('save_asset')){
 					$this->form_validation->set_rules('name', 'Asset Name', 'trim|required');
 					$this->form_validation->set_rules('usefullife', 'Useful Life', 'trim|is_numeric');
@@ -313,7 +316,9 @@
 						$data = $this->security->xss_clean($data);
 						if($last_id = $this->Common_model->save($data,$id,'assets')){
 							if($this->input->post('id')){
-								$this->activity_model->add_log(10);
+								$this->activity_model->add_log(14, 'Updated Asset: '.$data['name'], $id, 'asset');
+							} else {
+								$this->activity_model->add_log(13, 'Created Asset: '.$data['name'], $last_id, 'asset');
 							}
 							if(empty($id)){
 								notify_asset_event($last_id, 'new');
@@ -339,12 +344,31 @@
 
 	
 		 public function createcollateral($id = 0){
-
+			$this->rbac->check_operation_access();
+		 	$id = $this->input->post('id') ? $this->input->post('id') : $id;
 		   	$data['collateral'] = $this->Common_model->get_one($id,'collaterals');
-		    $id = $this->input->post('id');
+			
+			// Generate code if new and not submitted yet
+			if(empty($id) && !$this->input->post('save_collateral')){
+				$data['generated_code'] = 'COL-' . date('Y') . '-' . generate_unique_reference(6);
+			} else {
+				$data['generated_code'] = $this->input->post('collateral_code');
+			}
+
 			if($this->input->post('save_collateral')){
 					$this->form_validation->set_rules('name', 'Collateral Name', 'trim|required');
 					$this->form_validation->set_rules('nuban', 'Account No', 'trim|required');
+					
+					// Validation for unique code
+					$unique_code = '|is_unique[collaterals.collateral_code]';
+					if($this->input->post('id')){
+						$current_collateral = getbyid($this->input->post('id'), 'collaterals');
+						if($current_collateral && $current_collateral->collateral_code == $this->input->post('collateral_code')){
+							$unique_code = ''; // same code, no need for is_unique
+						}
+					}
+					$this->form_validation->set_rules('collateral_code', 'Collateral Code', 'trim|required' . $unique_code);
+
 					if ($this->form_validation->run() == FALSE) {
 						$data['errors'] = validation_errors();
 						$this->session->set_flashdata('error', $data['errors']);
@@ -362,6 +386,7 @@
 					}else{
 						
 						$data = array(
+							'collateral_code' => $this->input->post('collateral_code'),
 							'name' => $this->input->post('name'),
 							'nuban' => $this->input->post('nuban'),
 							'officerincharge' => $this->input->post('officerincharge'),
@@ -412,7 +437,9 @@
 				            }
 						if($last_id = $this->Common_model->save($data,$id,'collaterals')){
 							if($this->input->post('id')){
-								$this->activity_model->add_log(10);
+								$this->activity_model->add_log(18, 'Updated Collateral: '.$data['name'], $id, 'collateral');
+							} else {
+								$this->activity_model->add_log(17, 'Created Collateral: '.$data['name'], $last_id, 'collateral');
 							}
 							if(empty($id)){
 								notify_collateral_event($last_id, 'new');
@@ -481,17 +508,26 @@
 		
 			$this->form_validation->set_rules('name', 'Collateral Name', 'trim|required');
 			$this->form_validation->set_rules('nuban', 'Account No', 'trim|required');
+			
+			// Validation for unique code
+			$unique_code = '|is_unique[collaterals.collateral_code]';
+			$current_collateral = getbyid($this->input->post('id'), 'collaterals');
+			if($current_collateral && $current_collateral->collateral_code == $this->input->post('collateral_code')){
+				$unique_code = ''; // same code, no need for is_unique
+			}
+			$this->form_validation->set_rules('collateral_code', 'Collateral Code', 'trim|required' . $unique_code);
 
-if ($this->form_validation->run() == FALSE) {
-$view_data["errors"] = validation_errors();
-$this->session->set_flashdata("error", $view_data["errors"]);
-$view_data["collateral"] = (object)$this->input->post();
-if(!isset($view_data["collateral"]->id)) $view_data["collateral"]->id = $id;
+			if ($this->form_validation->run() == FALSE) {
+				$view_data["errors"] = validation_errors();
+				$this->session->set_flashdata("error", $view_data["errors"]);
+				$view_data["collateral"] = (object)$this->input->post();
+				if(!isset($view_data["collateral"]->id)) $view_data["collateral"]->id = $id;
 
-$this->load->view("admin/asset/editcollateral", $view_data);
-return;
-}			else{
+				$this->load->view("admin/asset/editcollateral", $view_data);
+				return;
+			} else {
 				$data = array(
+					'collateral_code' => $this->input->post('collateral_code'),
 					'name' => $this->input->post('name'),
 					'nuban' => $this->input->post('nuban'),
 					'description' => $this->input->post('description'),
@@ -500,8 +536,8 @@ return;
 					'facilityamount' => $this->input->post('facilityamount'),
 					'valuation' =>  $this->input->post('valuation'),
 					'dateregistered' =>  $this->input->post('dateregistered'),
-					$this->input->post('id') ? 'datemodified' : 'datecreated' => date('Y-m-d H:i:s'),
-					$this->input->post('id') ? 'modifiedby' : 'createdby' => $this->session->userdata('id')
+					'datemodified' => date('Y-m-d H:i:s'),
+					'modifiedby' => $this->session->userdata('id')
 				);
 
 				 if ($_FILES['image']['size'] > 0) {
@@ -568,7 +604,7 @@ return;
 				$data = array(
 					'errors' => validation_errors()
 				);
-				$this->session->set_flashdata('errors', $data['errors']);
+				$this->session->set_flashdata('error', $data['errors']);
 				redirect($_SERVER['HTTP_REFERER']);
 			}
 			else{
@@ -613,6 +649,9 @@ return;
 					$this->load->helper('notification');
 					notify_collateral_event($this->input->post('collateralid'), 'status');
 					
+					// Activity Log
+					$this->activity_model->add_log(20, 'Collateral status changed to '.ucfirst($status), $this->input->post('collateralid'), 'collateral');
+
 					$this->session->set_flashdata('success', 'Action was successful!');
 					redirect($_SERVER['HTTP_REFERER']);
 				}else{
@@ -754,6 +793,10 @@ return;
                 if($this->Common_model->save($data, $id, 'assets')){
                     $this->load->helper('notification');
                     notify_asset_event($id, 'status');
+                    
+                    // Activity Log
+                    $this->activity_model->add_log(16, 'Asset status changed to '.ucfirst($status), $id, 'asset');
+
                     $this->session->set_flashdata('success', 'Asset status updated successfully!');
                 }else{
                     $this->session->set_flashdata('error', 'Failed to update asset status');
@@ -811,6 +854,7 @@ return;
 
                     $data = $this->security->xss_clean($data);
                     if($this->Common_model->save($data, null, 'assets')){
+                        $this->activity_model->add_log(13, 'Bulk Upload Asset: '.$data['name'], $this->db->insert_id(), 'asset');
                         $count++;
                     } else {
                         $errors++;
@@ -831,9 +875,9 @@ return;
 
         public function delete($id = 0)
         {
-            $this->rbac->check_operation_access();
-            notify_asset_event($id, 'delete');
+			$this->rbac->check_operation_access(); // Validate delete permission
             if ($this->Common_model->delete($id, 'assets')) {
+                $this->activity_model->add_log(15, 'Deleted Asset ID: '.$id, $id, 'asset');
                 $this->session->set_flashdata('success', 'Asset deleted successfully!');
             } else {
                 $this->session->set_flashdata('error', 'Failed to delete asset');
@@ -843,9 +887,9 @@ return;
 
         public function delete_collateral($id = 0)
         {
-            $this->rbac->check_operation_access();
-            notify_collateral_event($id, 'delete');
+			$this->rbac->check_operation_access(); // Validate delete permission
             if ($this->Common_model->delete($id, 'collaterals')) {
+                $this->activity_model->add_log(19, 'Deleted Collateral ID: '.$id, $id, 'collateral');
                 $this->session->set_flashdata('success', 'Collateral deleted successfully!');
             } else {
                 $this->session->set_flashdata('error', 'Failed to delete collateral');

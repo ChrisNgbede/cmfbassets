@@ -227,17 +227,27 @@ endforeach; ?>
                                 <td>
                                     <span class="small font-weight-bold text-muted">
                                         <?php
-        echo getbyid($asset->department, 'departments')->shortname . '-' . $asset->assetcode . '-' . getbyid(getbyid($asset->owner, 'staff')->designation, 'designations')->shortname . '-' . date('ym', strtotime($asset->dateacquired));
-?>
+                                            $dept = getbyid($asset->department, 'departments');
+                                            $owner = getbyid($asset->owner, 'staff');
+                                            $designation = $owner ? getbyid($owner->designation, 'designations') : null;
+                                            
+                                            $dept_name = $dept ? $dept->shortname : 'N/A';
+                                            $desig_name = $designation ? $designation->shortname : 'N/A';
+                                            
+                                            echo $dept_name . '-' . $asset->assetcode . '-' . $desig_name . '-' . date('ym', strtotime($asset->dateacquired));
+                                        ?>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="d-flex flex-column">
                                         <span class="cat-name">
-                                            <?php echo getbyid($asset->category, 'asset_categories')->name?>
+                                            <?php 
+                                                $cat = getbyid($asset->category, 'asset_categories');
+                                                echo $cat ? $cat->name : '<span class="text-danger small italictext">Category missing</span>';
+                                            ?>
                                         </span>
                                         <span class="small text-muted font-italic">
-                                            <?php echo getbyid($asset->category, 'asset_categories')->code?>
+                                            <?php echo $cat ? $cat->code : '' ?>
                                         </span>
                                     </div>
                                 </td>
@@ -245,10 +255,10 @@ endforeach; ?>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-xs mr-2 bg-primary-soft text-primary rounded-circle d-flex align-items-center justify-content-center"
                                             style="width: 24px; height: 24px; font-size: 0.7rem; font-weight: 700;">
-                                            <?= substr(getbyid($asset->owner, 'staff')->firstname, 0, 1) . substr(getbyid($asset->owner, 'staff')->lastname, 0, 1)?>
+                                            <?= $owner ? substr($owner->firstname, 0, 1) . substr($owner->lastname, 0, 1) : '?' ?>
                                         </div>
                                         <span>
-                                            <?php echo getbyid($asset->owner, 'staff')->firstname . ' ' . getbyid($asset->owner, 'staff')->lastname?>
+                                            <?php echo $owner ? $owner->firstname . ' ' . $owner->lastname : '<span class="text-danger small italictext">Unassigned</span>' ?>
                                         </span>
                                     </div>
                                 </td>

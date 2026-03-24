@@ -180,7 +180,7 @@
                     <?php echo property_exists($collateral, 'name') ? $collateral->name : 'Unnamed Collateral'?>
                 </h2>
                 <span class="text-muted small">ID: #
-                    <?php echo $collateral->id?> | Registered on
+                    <?php echo $collateral->id?> | Code: <b><?php echo $collateral->collateral_code ?></b> | Registered on
                     <?= property_exists($collateral, 'dateregistered') && $collateral->dateregistered ? date('M d, Y', strtotime($collateral->dateregistered)) : 'N/A'?>
                 </span>
             </div>

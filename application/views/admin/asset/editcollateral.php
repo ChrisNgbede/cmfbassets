@@ -24,6 +24,11 @@
              </div> 
            
              <div class="form-group col-md-6">
+                 <label class="font-weight-600">Collateral Code <span class="text-danger">*</span></label>
+                <?= form_input('collateral_code', $collateral->collateral_code, 'class="form-control" id="collateral_code" required'); ?>
+            </div>
+            
+             <div class="form-group col-md-6">
                  <label class="font-weight-600">Name of Collateral <span class="text-danger">*</span></label>
                 <?= form_input('name',$collateral->name, 'class="form-control" placeholder="eg house in ikoyi" id="name" required'); ?>
             </div>

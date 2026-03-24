@@ -6,11 +6,12 @@
 			parent::__construct();
 			auth_check(); // check login auth
 			$this->rbac->check_module_access();
-			$this->rbac->check_operation_access();
-
+			// Removing check_operation_access() from construct to avoid blocking supporting/AJAX functions
+			$this->load->model('admin/Activity_model', 'activity_model');
 		}
 
 		public function index(){
+			$this->rbac->check_operation_access('view');
 			$this->db->select('staff.*, roles.admin_role_title as role_name, users.is_active, users.is_verify');
 			$this->db->from('staff');
 			$this->db->join('users', 'users.staffid = staff.id', 'left');
@@ -24,6 +25,7 @@
 		}
 
 	    public function create($id = 0){
+			$this->rbac->check_operation_access();
 
 		   	$data['staff'] = $this->Common_model->get_one($id,'staff');
 		    $id = $this->input->post('id');
@@ -60,7 +62,11 @@
 						);
 						$data = $this->security->xss_clean($data);
 						if($this->Common_model->save($data,$id,'staff')){
-							// Activity Log 
+							if($id){
+								$this->activity_model->add_log(5, 'Updated Staff: '.$data['firstname'].' '.$data['lastname'], $id, 'staff');
+							} else {
+								$this->activity_model->add_log(4, 'Created Staff: '.$data['firstname'].' '.$data['lastname'], $this->db->insert_id(), 'staff');
+							}
 							$this->session->set_flashdata('success', 'Staff has been added successfully!');
 							redirect(base_url('admin/staff'));
 						}
@@ -76,6 +82,7 @@
 
 
 		public function access($id = null){
+			$this->rbac->check_operation_access();
 
 				$data['roles'] = getalldata('roles');
 				$data['staff'] = $this->Common_model->get_one($id,'staff');
@@ -111,6 +118,8 @@
 								
 								
 								if($this->db->update('users',$user_data,['admin_id'=>$this->input->post('id')])){
+									// Activity Log
+									$this->activity_model->add_log(2, 'Updated User account for staff: '.$data['staff']->firstname, $this->input->post('id'), 'user');
 									echo json_encode(['status'=>0,'msg'=>'user record updated successfully']);
 								}else{
 									echo json_encode(['status'=>91,'msg'=>'failed to update user']);
@@ -128,6 +137,8 @@
 								exit();
 							}else{
 								if($this->Common_model->save($user_data,null,'users')){
+									// Activity Log
+									$this->activity_model->add_log(1, 'Created User account for staff: '.$data['staff']->firstname, $this->db->insert_id(), 'user');
 									echo json_encode(['status'=>0,'msg'=>'user record added successfully']);
 								}else{
 									echo json_encode(['status'=>91,'msg'=>'failed to add user']);

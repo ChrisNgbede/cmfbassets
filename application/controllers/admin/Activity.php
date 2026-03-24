@@ -12,8 +12,9 @@ class Activity extends MY_Controller {
 
 	public function index()
 	{
-		// $records = $this->activity_model->get_activity_log();
-		// var_dump($records);exit();
+		$this->rbac->check_operation_access('view');
+		$data['users'] = $this->db->get('users')->result();
+		$data['statuses'] = $this->db->get('activity_status')->result();
 		$data['title'] = 'User Activity Log';
 		$this->load->view('admin/includes/_header');
 		$this->load->view('admin/activity/activity-list', $data);
@@ -22,7 +23,13 @@ class Activity extends MY_Controller {
 
 	public function datatable_json()
 	{
-		$records['data'] = $this->activity_model->get_activity_log();
+		$filters = [
+			'status' => $this->input->get('status'),
+			'admin_id' => $this->input->get('admin_id'),
+			'from' => $this->input->get('from'),
+			'to' => $this->input->get('to')
+		];
+		$records['data'] = $this->activity_model->get_activity_log($filters);
 
 		$data = array();
 		$i=0;
@@ -30,9 +37,12 @@ class Activity extends MY_Controller {
 		{  
 			$data[]= array(
 				++$i,
-				($row['username']) ? $row['username'] : $row['adminname'],
-				$row['description'],
+				($row['username']) ? $row['username'] : 'System',
+				'<strong>'.$row['status_desc'].'</strong>: '.$row['description'],
+				$row['ip_address'],
+				$row['user_agent'],
 				date('F d, Y H:i',strtotime($row['created_at'])),	
+				$row['created_at'], // Raw timestamp for sorting
 			);
 		}
 		$records['data'] = $data;

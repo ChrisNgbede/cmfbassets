@@ -51,12 +51,15 @@ class RBAC
 	}
 
 	//--------------------------------------------------------------	
-	function check_operation_access()
+	function check_operation_access($operation = '')
 	{
 		if($this->obj->is_supper){
 			return 1;
 		}
-		elseif(!$this->check_operation_permission($this->obj->uri->segment(3)))
+
+		$operation = ($operation != '') ? $operation : $this->obj->uri->segment(3);
+
+		if(!$this->check_operation_permission($operation))
 		{
 
 			$back_to =$_SERVER['REQUEST_URI'];
