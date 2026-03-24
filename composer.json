@@ -1,0 +1,15 @@
+{
+    "name": "krispy/tsg",
+    "description": "web push notification",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Chris Ngbede",
+            "email": "krispyonums@gmail.com"
+        }
+    ],
+    "require": {
+        "minishlink/web-push": "^7.0"
+    }
+}
